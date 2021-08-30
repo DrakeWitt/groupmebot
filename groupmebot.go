@@ -36,9 +36,18 @@ type InboundMessage struct {
 	Attachments  []map[string]interface{} `json:"attachments"`
 }
 
+// Attachment represents an `attachment` field on the payload. Used for mentioning users.
+type Attachment struct {
+	Type			string `json:"type"`
+	Loci			[][]int `json:"loci"`
+	UserIds			[]string `json:"user_ids"`
+}
+
+// OutboundMessage represents the payload sent to the GroupMe API.
 type OutboundMessage struct {
-	ID   string `json:"bot_id"`
-	Text string `json:"text"`
+	ID   			string `json:"bot_id"`
+	Text 			string `json:"text"`
+	Attachments 	[]Attachment `json:"attachments"`
 }
 
 // A CSVLogger comes with the bot, but any logger can be substituted so long as
@@ -69,8 +78,13 @@ func (b *GroupMeBot) ConfigureFromJson(filename string) error {
 	return err
 }
 
-func (b *GroupMeBot) SendMessage(outMessage string) (*http.Response, error) {
-	msg := OutboundMessage{b.ID, outMessage}
+func (b *GroupMeBot) SendMessage(outMessage string, attachments *[]Attachment) (*http.Response, error) {
+	a := []Attachment{}
+	if attachments != nil {
+		a = *attachments
+	}
+
+	msg := OutboundMessage{b.ID, outMessage, a}
 	payload, err := json.Marshal(msg)
 	if err != nil {
 		return nil, err
@@ -98,7 +112,7 @@ func (b *GroupMeBot) HandleMessage(msg InboundMessage) {
 	}
 	if len(resp) > 0 {
 		log.Printf("Sending message: %v\n", resp)
-		_, err := b.SendMessage(resp)
+		_, err := b.SendMessage(resp, nil)
 		if err != nil {
 			log.Fatal("Error when sending.", err)
 		}
